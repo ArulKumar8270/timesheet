@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import { useState } from "react";
 
 
-import { features } from "process";
 
 
 
@@ -15,6 +14,17 @@ import { features } from "process";
 export default function Home() {
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [submitMessage, setSubmitMessage] = useState("");
+
+  const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+    e.preventDefault();
+    setMenuOpen(false);
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
 
   useEffect(() => {
     const track = document.querySelector(".carousel-track") as HTMLElement | null;
@@ -61,39 +71,85 @@ export default function Home() {
 
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const handleEnquirySubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const contactPerson = (formData.get("lead-name") as string)?.trim() || "";
+    const email = (formData.get("lead-email") as string)?.trim() || "";
+    const companySize = (formData.get("lead-size") as string)?.trim() || "";
+    const phone = (formData.get("lead-phone") as string)?.trim() || "";
+    const clientName = (formData.get("lead-company") as string)?.trim() || "Website Lead";
+
+    if (!contactPerson || !email || !phone) {
+      setSubmitStatus("error");
+      setSubmitMessage("Please fill in Full Name, Email, and Phone Number.");
+      return;
+    }
+
+    setSubmitStatus("loading");
+    setSubmitMessage("");
+
+    const payload = {
+      crmDate: new Date().toISOString().split("T")[0],
+      clientName: clientName || "Website Lead",
+      contactPerson,
+      phone,
+      email,
+      location: "",
+      status: "New",
+      notes: companySize ? `Company size: ${companySize}` : "From website enquiry form",
+    };
+
+    try {
+      const res = await fetch("https://nicknameinfo.net/timesheet/crm/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || `Request failed (${res.status})`);
+      }
+
+      setSubmitStatus("success");
+      setSubmitMessage("Thank you! We'll be in touch within 2 hours.");
+      form.reset();
+    } catch (err) {
+      setSubmitStatus("error");
+      setSubmitMessage(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+    }
+  };
+
   return (
     <>
-
-
-
-
-
-
-      {/* <Navbar /> */}
-
       {/* NAVBAR */}
-      <nav className="main-navbar">
+      <nav className="main-navbar" aria-label="Main navigation">
         <div className="nav-container">
 
           <div className="nav-logo">
-            <img src="/images/Logo.png" alt="NickName InfoTech" />
+            <a href="#home" onClick={(e) => scrollToSection(e, "home")} aria-label="Home">
+              <img src="/images/Logo.png" alt="NickName InfoTech" />
+            </a>
           </div>
 
           {/* LINKS */}
           <ul className={`nav-links ${menuOpen ? "active" : ""}`}>
-            <li>Home</li>
-            <li>Product</li>
-            <li>Features</li>
-            <li>Industries</li>
-            <li>Security</li>
-            <li>Pricing</li>
-            <li>Company</li>
-            <li>Contact</li>
+            <li><a href="#home" onClick={(e) => scrollToSection(e, "home")}>Home</a></li>
+            <li><a href="#product" onClick={(e) => scrollToSection(e, "product")}>Product</a></li>
+            <li><a href="#about" onClick={(e) => scrollToSection(e, "about")}>Features</a></li>
+            <li><a href="#industries" onClick={(e) => scrollToSection(e, "industries")}>Industries</a></li>
+            <li><a href="#security" onClick={(e) => scrollToSection(e, "security")}>Security</a></li>
+            <li><a href="#pricing" onClick={(e) => scrollToSection(e, "pricing")}>Pricing</a></li>
+            <li><a href="#about" onClick={(e) => scrollToSection(e, "about")}>Company</a></li>
+            <li><a href="#pricing" onClick={(e) => scrollToSection(e, "pricing")}>Contact</a></li>
           </ul>
 
           <div className="nav-actions">
-            <button className="btn-ghost">Sign In</button>
-            <button className="btn-primary">Register</button>
+            <a href="#pricing" onClick={(e) => scrollToSection(e, "pricing")}><button className="btn-ghost">Sign In</button></a>
+            <a href="#pricing" onClick={(e) => scrollToSection(e, "pricing")}><button className="btn-primary">Register</button></a>
           </div>
 
           {/* HAMBURGER */}
@@ -104,12 +160,9 @@ export default function Home() {
         </div>
       </nav>
 
-
-
-
-
-      {/* {Hero sectio} */}
-      <section className="hero-curve">
+      <main id="main-content">
+      {/* Hero */}
+      <section className="hero-curve" id="home" aria-labelledby="hero-heading">
         <div className="hero-glow"></div>
 
         <div className="hero-wrap">
@@ -125,18 +178,23 @@ export default function Home() {
 
           {/* CENTER */}
           <div className="hero-center">
-            <h1 className="hero-title">
-              Next-Gen Timesheet Software Built
-              <span>for UAE Businesses</span>
+            <h1 id="hero-heading" className="hero-title">
+              The #1 Timesheet & Productivity Suite Built
+              <span> for the UAE Workforce.</span>
             </h1>
 
             <p>
-              Automate time tracking, unlock productivity insights, improve operational efficiency, and ensure compliance with UAE labor regulations through one intelligent platform.
+              Stop wasting hours on manual logs. Automate your attendance, stay 100% MOHRE compliant, and recapture lost billable time with our enterprise-grade platform.
             </p>
 
-            <button className="hero-btn">Get Personalized Demo</button>
+            <div className="hero-cta-row">
+              <a href="#pricing" onClick={(e) => scrollToSection(e, "pricing")}><button className="hero-btn primary">Start Your 14-Day Free Trial</button></a>
+              <a href="#contact" onClick={(e) => scrollToSection(e, "contact")}><button className="hero-btn secondary">Book a Live Demo</button></a>
+            </div>
+            <p className="hero-trust-badge">
+              Trusted by 500+ Companies across Dubai, Abu Dhabi, and the Northern Emirates.
+            </p>
           </div>
-
 
           {/* RIGHT FEATURES */}
           <div className="curve right">
@@ -148,49 +206,76 @@ export default function Home() {
           </div>
 
         </div>
+
+        {/* Hero product shot – 3D cross-platform (dashboard + phone) */}
+        <div className="hero-product-shot">
+          <img src="/images/time1.png" alt="NickName Time Sheet dashboard - attendance and timesheet view" className="mockup-dashboard" />
+          <img src="/images/mob1.png" alt="NickName Time Sheet mobile app - clock in from phone" className="mockup-phone" />
+        </div>
       </section>
 
+      {/* Trust bar – UAE focus, monochrome logos */}
+      <section className="trust-bar">
+        <div className="trust-bar-inner">
+          <p className="trust-uae">
+            <span className="uae-flag" aria-hidden>🇦🇪</span>
+            Designed for Dubai, Abu Dhabi & beyond.
+          </p>
+          <div className="trust-logos">
+            <div className="trust-logo"><img src="/images/Logo.png" alt="Client" /></div>
+          </div>
+        </div>
+      </section>
 
-
-
-
-
-      {/* {Hero sectio END} */}
-
-
-
-      {/* STATS + TRUST */}
+      {/* Problem / Solution – redesigned */}
       <section className="stats-dark">
         <div className="stats-container">
-
-          {/* LEFT CONTENT */}
           <div className="stats-text">
+            <p className="stats-label">Why switch</p>
             <h2>
-              Proven Insights <br />
-              <span>That Drive Performance</span>
+              Tired of Chasing <span>Paper Timesheets?</span>
             </h2>
-
-            <p>
-              Gain complete visibility into workforce adoption, accurate time and leave tracking,
-              project progress, budget utilization, productivity insights, and payroll-ready reports—
-              all from a single platform.
+            <p className="stats-lead">
+              Eliminate manual errors, meet WPS requirements, and control overtime—all from one platform.
             </p>
 
-            <ul className="stats-points">
-              <li><span className="dot yellow"></span>99.9% Reliable Platform</li>
-              <li><span className="dot blue"></span>100% Precise Time Data</li>
-              <li><span className="dot green"></span>Configurable for Complex Industry Requirements</li>
-            </ul>
+            <div className="stats-cards">
+              <article className="stats-card-item">
+                <div className="stats-card-icon yellow">
+                  <span aria-hidden>✓</span>
+                </div>
+                <div className="stats-card-body">
+                  <h3>Eliminate Human Error</h3>
+                  <p>Say goodbye to manual entry mistakes that cost your business thousands in payroll.</p>
+                </div>
+              </article>
+              <article className="stats-card-item">
+                <div className="stats-card-icon blue">
+                  <span aria-hidden>✓</span>
+                </div>
+                <div className="stats-card-body">
+                  <h3>WPS & Labor Law Ready</h3>
+                  <p>Generate reports that are perfectly formatted for UAE Wage Protection System (WPS) requirements.</p>
+                </div>
+              </article>
+             
+            </div>
+            <article className="stats-card-item mt-3">
+                <div className="stats-card-icon green">
+                  <span aria-hidden>✓</span>
+                </div>
+                <div className="stats-card-body">
+                  <h3>Real-Time Overtime Tracking</h3>
+                  <p>See exactly who is working overtime instantly to manage your labor costs effectively.</p>
+                </div>
+              </article>
           </div>
 
-          {/* RIGHT IMAGE */}
           <div className="stats-image-wrapper">
-            <img
-              src="/images/time1.png"
-              alt="Timesheet Preview"
-            />
+            <div className="stats-image-frame">
+              <img src="/images/time1.png" alt="Timesheet dashboard preview" />
+            </div>
           </div>
-
         </div>
       </section>
 
@@ -202,7 +287,7 @@ export default function Home() {
 
       {/* {features section } */}
 
-      <section className="why-dark">
+      <section className="why-dark" id="about">
         <div className="container why-grid">
 
           {/* LEFT IMAGE */}
@@ -213,48 +298,53 @@ export default function Home() {
             />
           </div>
 
-          {/* RIGHT CONTENT */}
+          {/* RIGHT CONTENT - Core Feature Grid (Value-Based) */}
           <div className="why-content">
             <h2>
-              Companies Rely on Us
-              <span> for Productivity Made Simple</span>
+              Built for the Way <span>You Work</span>
             </h2>
 
             <p className="subtitle">
-              Manage projects, track budgets, assign tasks, hold employees accountable,
-              generate invoices - all in your language effortlessly.
+              Every feature is designed to save time, reduce errors, and keep you compliant.
             </p>
 
             <ul className="why-list">
               <li>
-                <span className="icon red">⏱</span>
+                <span className="icon yellow">📊</span>
                 <div>
-                  <h4>Mobile-first, employee-friendly design</h4>
+                  <h4>Project Tracking</h4>
                   <p>
-                    Easy-to-use interface designed for seamless access on any device,
-                    keeping employees productive on the go.
+                    <strong>Maximize Profitability:</strong> Assign hours to specific projects and see exactly where your budget is going in real-time.
                   </p>
                 </div>
               </li>
 
               <li>
-                <span className="icon white">⚖</span>
+                <span className="icon blue">🔐</span>
                 <div>
-                  <h4>Secure, cloud-based access</h4>
+                  <h4>Bio-Metric Sync</h4>
                   <p>
-                    Reliable cloud platform that ensures your data is safe,
-                    accessible anytime, anywhere.
+                    <strong>Prevent Buddy Punching:</strong> Seamlessly integrate with your office hardware or use GPS-fenced mobile clock-ins.
                   </p>
                 </div>
               </li>
 
               <li>
-                <span className="icon green">📊</span>
+                <span className="icon green">📋</span>
                 <div>
-                  <h4>Track projects, budgets, and performance</h4>
+                  <h4>Leave Management</h4>
                   <p>
-                    Monitor project progress, budget usage, and team performance in real time
-                    for better decision-making.
+                    <strong>Automated Workflows:</strong> Employees request leave via the app; managers approve in one click. No more emails.
+                  </p>
+                </div>
+              </li>
+
+              <li>
+                <span className="icon red">🌐</span>
+                <div>
+                  <h4>Multilingual UI</h4>
+                  <p>
+                    <strong>Inclusive Design:</strong> Available in Arabic, English, Hindi, and Tagalog to support the UAE&apos;s diverse workforce.
                   </p>
                 </div>
               </li>
@@ -352,7 +442,7 @@ export default function Home() {
 
 
       {/* DASHBOARD UI CAROUSEL SECTION */}
-      <section className="ui-carousel">
+      <section className="ui-carousel" id="product">
         <div className="container">
 
           <div className="ui-header">
@@ -470,8 +560,7 @@ export default function Home() {
       {/* Mobile App for Employees & Managers END */}
 
       {/* Security */}
-
-      <section className="security-plexify">
+      <section className="security-plexify" id="security">
         <div className="container">
 
           <div className="security-plexify-wrapper">
@@ -479,28 +568,18 @@ export default function Home() {
             {/* LEFT – CONTENT */}
             <div className="security-plexify-content">
               <h2>
-                Built with <span>Enterprise-Grade</span> Security
-
+                Enterprise-Grade Security <span>for Peace of Mind</span>
               </h2>
 
               <p>
-                Ensuring data privacy, secure access, and reliable protection across all user roles.
+                Your data and compliance are protected with local hosting, strict access controls, and full auditability.
               </p>
 
               <ul>
-                <li>✔ Secure role-based access</li>
-                <li>✔ Encrypted data protection</li>
-                <li>✔ Strong user authentication</li>
-                <li>✔ Continuous security monitoring</li>
-                <li>✔ Compliance with security standards</li>
+                <li><strong>Data Residency:</strong> Your data is stored on secure, local servers with 99.9% uptime.</li>
+                <li><strong>Role-Based Access:</strong> Control exactly who sees what with customizable permission levels.</li>
+                <li><strong>Audit Trails:</strong> Every entry is timestamped and logged for total transparency during audits.</li>
               </ul>
-              <br />
-
-              <p>
-
-                UAE Complient - Fully Configurable
-
-              </p>
 
 
 
@@ -645,7 +724,7 @@ export default function Home() {
                 <li>Tamil</li>
                 <li>Hindi</li>
                 <li>Urdu</li>
-                <li>Malayalam</li>
+                {/* <li>Malayalam</li> */}
               </ul>
             </div>
 
@@ -678,65 +757,60 @@ export default function Home() {
       {/* Language section END */}
 
 
-      {/* ENQUIRY SECTION */}
-      <section className="enquiry-center">
+      {/* ENQUIRY SECTION - Lead Capture */}
+      <section className="enquiry-center" id="pricing">
         <div className="container">
-
           <div className="enquiry-head">
-
             <h2>
-              Request a <span>Free Demo</span>
+              Ready to <span>Modernize Your Operations?</span>
             </h2>
             <p>
-              Talk to our expert to find the best approach for your requirements.
+              Fill out the form below and an expert will reach out within 2 hours.
             </p>
           </div>
 
-          <form className="enquiry-form">
-
-            <div className="field">
-              <label>Full Name</label>
-              <input type="text" />
+          <div className="enquiry-form-box">
+            <div className="enquiry-form-box-inner">
+              <form className="enquiry-form" onSubmit={handleEnquirySubmit}>
+                <div className="field">
+                  <input type="text" id="lead-name" name="lead-name" placeholder=" " required />
+                  <label htmlFor="lead-name">Full Name</label>
+                </div>
+                <div className="field">
+                  <input type="email" id="lead-email" name="lead-email" placeholder=" " required />
+                  <label htmlFor="lead-email">Work Email (e.g. name@company.ae)</label>
+                </div>
+                <div className="field">
+                  <input type="text" id="lead-company" name="lead-company" placeholder=" " />
+                  <label htmlFor="lead-company">Company Name</label>
+                </div>
+                <div className="field">
+                  <select id="lead-size" name="lead-size" defaultValue="">
+                    <option value="">Select size</option>
+                    <option>1–50</option>
+                    <option>51–200</option>
+                    <option>200+</option>
+                  </select>
+                  <label htmlFor="lead-size">Company Size</label>
+                </div>
+                <div className="field">
+                  <input type="tel" id="lead-phone" name="lead-phone" placeholder=" " required />
+                  <label htmlFor="lead-phone">Phone Number</label>
+                </div>
+                <button type="submit" className="submit-btn" disabled={submitStatus === "loading"}>
+                  {submitStatus === "loading" ? "Sending…" : "Get My Free Setup Guide"}
+                </button>
+                {submitStatus === "success" && (
+                  <p className="enquiry-form-message success">{submitMessage}</p>
+                )}
+                {submitStatus === "error" && (
+                  <p className="enquiry-form-message error">{submitMessage}</p>
+                )}
+              </form>
             </div>
-
-            <div className="field">
-              <label>Work Email</label>
-              <input type="email" />
-            </div>
-
-            <div className="field">
-              <label>Company Name</label>
-              <input type="text" />
-            </div>
-
-            <div className="field">
-              <label>Company Size</label>
-              <select>
-                <option>1–10 Employees</option>
-                <option>11–50 Employees</option>
-                <option>51–200 Employees</option>
-                <option>200+ Employees</option>
-              </select>
-            </div>
-
-            <div className="field">
-              <label>Your Requirement</label>
-              <textarea></textarea>
-            </div>
-
-            <button className="submit-btn">
-              Book A Free Demo →
-            </button>
-
-            <p className="form-note">
-              We’ll be in touch within 24 hours to assist you
-            </p>
-
-          </form>
+          </div>
         </div>
       </section>
-
-
 
       {/* ENQUIRY SECTION  END*/}
 
@@ -773,7 +847,17 @@ export default function Home() {
       <footer className="footer-dark">
         <div className="container">
 
-
+          {/* Quick Trust Badges */}
+          <div className="footer-quick-trust">
+            <div className="trust-badge">
+              <span className="trust-icon">✓</span>
+              <span>MOHRE Compliance Badge</span>
+            </div>
+            <div className="trust-badge">
+              <span className="trust-icon">✓</span>
+              <span>24/7 Local Support (UAE Timezone)</span>
+            </div>
+          </div>
 
           <div className="footer-grid">
 
@@ -842,7 +926,7 @@ export default function Home() {
         </div>
       </footer>
 
-
+      </main>
 
 
 
